@@ -2,7 +2,7 @@
 # Each variant is run on all photos with the prompt "tree". For each photo the
 # bottom of the combined tree mask is recorded. The 4 photos at one position have
 # identical framing, so a good variant gives the same bottom in all 4 (small spread)
-# and that bottom should sit at the trunk base, not at the bottom of the canopy.
+# and that bottom should sit at the trunk base, not at the bottom of the crown.
 
 import csv
 import os
@@ -77,7 +77,7 @@ def mask_extent(img, imgsz=640):
 
 
 def crop_around_tree(img):
-    """Two passes: find the canopy on the full photo, then crop a region around it
+    """Two passes: find the crown on the full photo, then crop a region around it
     that reaches down towards the ground, run again, and shift the result back."""
     r = model.predict(source=img, conf=CONF, verbose=False)[0]
     if len(r.boxes) == 0:
@@ -87,7 +87,7 @@ def crop_around_tree(img):
     cx1 = int(max(0, x1 - 0.25 * w))
     cx2 = int(min(img.shape[1], x2 + 0.25 * w))
     cy1 = int(max(0, y1 - 0.1 * h))
-    cy2 = int(min(img.shape[0], y2 + 1.0 * h))      # one canopy height below the box
+    cy2 = int(min(img.shape[0], y2 + 1.0 * h))      # one crown height below the box
     ext = mask_extent(img[cy1:cy2, cx1:cx2])
     if ext is None:
         return None

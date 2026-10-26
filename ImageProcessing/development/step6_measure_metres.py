@@ -29,13 +29,13 @@ import matplotlib.pyplot as plt
 # Settings
 TEST_DIR = Path(r"C:\Users\tiffa\OneDrive\Documents\University\Engineering\Year 4"
                 r"\Semester 2\Project 448\Project\Testing\Tree Photo Test\Analysis Images")
-STEP5_CSV = Path(__file__).resolve().parent.parent / "output" / "step5" / "canopy_trunk.csv"
+STEP5_CSV = Path(__file__).resolve().parent.parent / "output" / "step5" / "crown_trunk.csv"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output" / "step6"
 
 STICK_DISTANCE_M = 2.5          # camera to stick (Tiffany, 2026-10-04)
 MARK_SPACING_M = 0.100          # stick marks, top to top
 TAPE_HEIGHT_M = 4.0             # tape-measured reference values of the tree
-TAPE_CANOPY_M = 3.5
+TAPE_CROWN_M = 3.5
 TAPE_CIRCUMFERENCE_M = 0.420
 TAPE_DIAMETER_M = TAPE_CIRCUMFERENCE_M / np.pi
 
@@ -109,19 +109,19 @@ for r in step5:
     spacing = stick_mark_spacing(img, plot)
     f_px = spacing * STICK_DISTANCE_M / MARK_SPACING_M          # focal length from the stick
 
-    height_px, canopy_px, trunk_px = float(r["tree_height"]), float(r["canopy_width"]), float(r["trunk_width"])
+    height_px, crown_px, trunk_px = float(r["tree_height"]), float(r["crown_width"]), float(r["trunk_width"])
     stick_scale = d_tree / f_px                                 # metres per pixel at the tree
     trunk_scale = TAPE_DIAMETER_M / trunk_px                    # metres per pixel from the taped trunk
     rows.append({
         "position": position, "image": r["image"], "distance_m": d_tree,
         "mark_spacing_px": round(spacing, 2), "focal_px": round(f_px, 1),
-        "height_px": height_px, "canopy_px": canopy_px, "trunk_px": trunk_px,
+        "height_px": height_px, "crown_px": crown_px, "trunk_px": trunk_px,
         "crown_length_px": float(r["crown_length"]), "crown_base_px": float(r["crown_base_height"]),
         "height_m": round(height_px * stick_scale, 3),
-        "canopy_m": round(canopy_px * stick_scale, 3),
+        "crown_m": round(crown_px * stick_scale, 3),
         "trunk_diameter_mm": round(trunk_px * stick_scale * 1000, 1),
         "height_m_trunk_scale": round(height_px * trunk_scale, 3),
-        "canopy_m_trunk_scale": round(canopy_px * trunk_scale, 3),
+        "crown_m_trunk_scale": round(crown_px * trunk_scale, 3),
     })
 
 # The focal length belongs to the camera, not to the photo, so the main result uses one
@@ -131,10 +131,10 @@ F_CALIBRATED = float(np.mean([r["focal_px"] for r in rows]))
 for r in rows:
     scale = r["distance_m"] / F_CALIBRATED
     r["height_m_calibrated"] = round(r["height_px"] * scale, 3)
-    r["canopy_m_calibrated"] = round(r["canopy_px"] * scale, 3)
+    r["crown_m_calibrated"] = round(r["crown_px"] * scale, 3)
     r["trunk_diameter_mm_calibrated"] = round(r["trunk_px"] * scale * 1000, 1)
-    r["crown_length_m_calibrated"] = round(r["crown_length_px"] * scale, 3)        # tree top to canopy base
-    r["crown_base_height_m_calibrated"] = round(r["crown_base_px"] * scale, 3)     # canopy base to the ground
+    r["crown_length_m_calibrated"] = round(r["crown_length_px"] * scale, 3)        # tree top to crown base
+    r["crown_base_height_m_calibrated"] = round(r["crown_base_px"] * scale, 3)     # crown base to the ground
 
 with open(OUTPUT_DIR / "measurements_m.csv", "w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -159,33 +159,33 @@ for p, s, ds, fp in zip(positions, per_position("mark_spacing_px"), spread("mark
 for title, suffix in ((f"one calibrated focal length, f = {F_CALIBRATED:.0f} px (main result)", "_calibrated"),
                       ("focal length from the stick in each photo", "")):
     print(f"\nSizes in metres, {title}")
-    print(f"  tape: height {TAPE_HEIGHT_M} m, canopy {TAPE_CANOPY_M} m, trunk diameter {TAPE_DIAMETER_M * 1000:.1f} mm")
-    print(f"  {'position':20s}{'height m':>12s}{'canopy m':>12s}{'trunk mm':>12s}")
-    for p, hm, cm, tm in zip(positions, per_position("height_m" + suffix), per_position("canopy_m" + suffix),
+    print(f"  tape: height {TAPE_HEIGHT_M} m, crown {TAPE_CROWN_M} m, trunk diameter {TAPE_DIAMETER_M * 1000:.1f} mm")
+    print(f"  {'position':20s}{'height m':>12s}{'crown m':>12s}{'trunk mm':>12s}")
+    for p, hm, cm, tm in zip(positions, per_position("height_m" + suffix), per_position("crown_m" + suffix),
                              per_position("trunk_diameter_mm" + suffix)):
         print(f"  {p:20s}{hm:12.2f}{cm:12.2f}{tm:12.1f}")
-    for name, key, ref in (("height", "height_m", TAPE_HEIGHT_M), ("canopy", "canopy_m", TAPE_CANOPY_M),
+    for name, key, ref in (("height", "height_m", TAPE_HEIGHT_M), ("crown", "crown_m", TAPE_CROWN_M),
                            ("trunk", "trunk_diameter_mm", TAPE_DIAMETER_M * 1000)):
         v = per_position(key + suffix)
         print(f"  {name:8s} mean {np.mean(v):.3f}, error vs tape {100 * (np.mean(v) / ref - 1):+.1f}%, "
               f"range over positions {100 * np.ptp(v) / np.mean(v):.1f}%")
 
-print("\nCanopy split (calibrated focal length; no tape reference for these)")
+print("\nCrown split (calibrated focal length; no tape reference for these)")
 print(f"  {'position':20s}{'crown length m':>16s}{'crown base m':>14s}")
 for p, cl, cb in zip(positions, per_position("crown_length_m_calibrated"), per_position("crown_base_height_m_calibrated")):
     print(f"  {p:20s}{cl:16.2f}{cb:14.2f}")
 
 print("\nSizes in metres, trunk scale (taped trunk diameter as the ruler, from the test plan)")
-for p, hm, cm in zip(positions, per_position("height_m_trunk_scale"), per_position("canopy_m_trunk_scale")):
+for p, hm, cm in zip(positions, per_position("height_m_trunk_scale"), per_position("crown_m_trunk_scale")):
     print(f"  {p:20s}{hm:12.2f}{cm:12.2f}")
-for name, key, ref in (("height", "height_m_trunk_scale", TAPE_HEIGHT_M), ("canopy", "canopy_m_trunk_scale", TAPE_CANOPY_M)):
+for name, key, ref in (("height", "height_m_trunk_scale", TAPE_HEIGHT_M), ("crown", "crown_m_trunk_scale", TAPE_CROWN_M)):
     v = per_position(key)
     print(f"  {name:8s} mean {np.mean(v):.3f}, error vs tape {100 * (np.mean(v) / ref - 1):+.1f}%")
 
 d = [float(p.split(" - ")[1].rstrip("m")) for p in positions]
 print("\nApparent growth vs the 20 m baseline (expected from distance: "
       + ", ".join(f"{d[0] / x:.3f}" for x in d) + ")")
-for key in ("height_px", "canopy_px", "trunk_px"):
+for key in ("height_px", "crown_px", "trunk_px"):
     v = per_position(key)
     raw = [x / v[0] for x in v]
     spacing = per_position("mark_spacing_px")

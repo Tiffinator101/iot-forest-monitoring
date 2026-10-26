@@ -1,13 +1,13 @@
-# Step 5: find the canopy with YOLOE and the trunk with classical image processing.
+# Step 5: find the crown with YOLOE and the trunk with classical image processing.
 #
-# Canopy (YOLOE + convex hull):
-#   1. yoloe-26s-seg with the prompt "tree" gives a canopy-only mask (step 4c).
+# Crown (YOLOE + convex hull):
+#   1. yoloe-26s-seg with the prompt "tree" gives a crown-only mask (step 4c).
 #   2. Keep the largest mask, so a distant bush can never be picked instead.
 #   3. Wrap it in a convex hull (workshop Part 3) for a clean outline:
-#      tree top, canopy width, canopy bottom and canopy area.
+#      tree top, crown width, crown bottom and crown area.
 #
-# Trunk (workshop Part 3/4 pipeline in a strip below the canopy):
-#   1. Crop a strip under the middle of the canopy (region of interest).
+# Trunk (workshop Part 3/4 pipeline in a strip below the crown):
+#   1. Crop a strip under the middle of the crown (region of interest).
 #   2. Gaussian blur, then convert to Lab colour space and take the a* channel
 #      (green to red axis): grass is green (low a*), bark is reddish (high a*).
 #   3. Otsu threshold on a* gives a binary mask, cleaned with opening and closing.
@@ -32,11 +32,11 @@ from ultralytics import YOLOE
 TEST_DIR = Path(r"C:\Users\tiffa\OneDrive\Documents\University\Engineering\Year 4"
                 r"\Semester 2\Project 448\Project\Testing\Tree Photo Test\Analysis Images")
 CONF = 0.25
-STRIP_HALF_WIDTH = 0.3   # strip spans canopy centre ± 0.3 x canopy width
-STRIP_ABOVE = 0.1        # strip starts 0.1 x canopy height above the canopy bottom
-STRIP_BELOW = 0.6        # and ends 0.6 x canopy height below it
-TRACE_LOW_LEAVES = False  # True: extend the canopy base into low leaves against grass (texture
-                          # tracing). False: canopy base = bottom of the YOLOE canopy outline.
+STRIP_HALF_WIDTH = 0.3   # strip spans crown centre ± 0.3 x crown width
+STRIP_ABOVE = 0.1        # strip starts 0.1 x crown height above the crown bottom
+STRIP_BELOW = 0.6        # and ends 0.6 x crown height below it
+TRACE_LOW_LEAVES = False  # True: extend the crown base into low leaves against grass (texture
+                          # tracing). False: crown base = bottom of the YOLOE crown outline.
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output" / "step5"
 
 # The model files, including YOLOE's text encoder (mobileclip*.ts), are in ../models, and
@@ -48,7 +48,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 (OUTPUT_DIR / "stages").mkdir(exist_ok=True)
 
 
-def find_canopy(img):
+def find_crown(img):
     """Largest YOLOE tree mask, wrapped in a convex hull."""
     r = model.predict(source=img, conf=CONF, retina_masks=True, verbose=False)[0]
     if r.masks is None:
@@ -64,8 +64,8 @@ def find_canopy(img):
             "mask_area": int((mask > 0).sum())}
 
 
-def trace_canopy_base(img, canopy, trunk):
-    """Extend the canopy mask down into low leaves that hang in front of the grass.
+def trace_crown_base(img, crown, trunk):
+    """Extend the crown mask down into low leaves that hang in front of the grass.
     YOLOE separates leaves from sky well, but stops where grass is behind the leaves
     (green on green). Colour can't tell the two apart here, but texture can: leaves are
     a busy pattern of small light and dark specks, grass at this distance looks smooth.
@@ -73,15 +73,15 @@ def trace_canopy_base(img, canopy, trunk):
          filter removes small specks but keeps edges, so the hill line and the edges of
          the tree's shadow score low and leaf texture scores high.
       2. Threshold halfway between the speckle of grass (below the trunk base) and of the
-         lower canopy, so it adapts to each photo's light and sharpness.
-      3. Only look in a window under the canopy, and skip the trunk columns (bark is busy too).
-      4. Keep compact clumps that touch the canopy mask; long thin streaks are edges, not leaves.
-    Returns (canopy base row, mask of the added leaf pixels)."""
+         lower crown, so it adapts to each photo's light and sharpness.
+      3. Only look in a window under the crown, and skip the trunk columns (bark is busy too).
+      4. Keep compact clumps that touch the crown mask; long thin streaks are edges, not leaves.
+    Returns (crown base row, mask of the added leaf pixels)."""
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     speckle = cv2.blur(np.abs(gray.astype(np.float32) - cv2.medianBlur(gray, 5).astype(np.float32)), (9, 9))
-    mask = canopy["mask"] > 0
-    bottom, height = canopy["bottom"], canopy["height"]
-    cols = slice(canopy["left"], canopy["right"] + 1)
+    mask = crown["mask"] > 0
+    bottom, height = crown["bottom"], crown["height"]
+    cols = slice(crown["left"], crown["right"] + 1)
 
     grass = np.median(speckle[trunk["base"] + 20:trunk["base"] + 120, cols])
     low_rows = slice(bottom - int(0.15 * height), bottom)
@@ -106,10 +106,10 @@ def trace_canopy_base(img, canopy, trunk):
             continue
         leaves |= component
 
-    # Canopy base: lowest row with at least 1% of the canopy width covered, so a stray
+    # Crown base: lowest row with at least 1% of the crown width covered, so a stray
     # pixel can't set it
     covered = (mask | leaves).sum(axis=1)
-    base = int(np.where(covered >= max(3, int(0.01 * canopy["width"])))[0].max())
+    base = int(np.where(covered >= max(3, int(0.01 * crown["width"])))[0].max())
     return base, leaves
 
 
@@ -208,13 +208,13 @@ def width_canny(a_star, trunk_mask, y0, y1, a_width):
     return (float(np.median(widths)) if widths else None), edges
 
 
-def find_trunk(img, canopy, stages_prefix=None):
-    """Classical trunk segmentation in a strip below the canopy."""
-    cx = (canopy["left"] + canopy["right"]) / 2
-    sx1 = int(max(0, cx - STRIP_HALF_WIDTH * canopy["width"]))
-    sx2 = int(min(img.shape[1], cx + STRIP_HALF_WIDTH * canopy["width"]))
-    sy1 = int(max(0, canopy["bottom"] - STRIP_ABOVE * canopy["height"]))
-    sy2 = int(min(img.shape[0], canopy["bottom"] + STRIP_BELOW * canopy["height"]))
+def find_trunk(img, crown, stages_prefix=None):
+    """Classical trunk segmentation in a strip below the crown."""
+    cx = (crown["left"] + crown["right"]) / 2
+    sx1 = int(max(0, cx - STRIP_HALF_WIDTH * crown["width"]))
+    sx2 = int(min(img.shape[1], cx + STRIP_HALF_WIDTH * crown["width"]))
+    sy1 = int(max(0, crown["bottom"] - STRIP_ABOVE * crown["height"]))
+    sy2 = int(min(img.shape[0], crown["bottom"] + STRIP_BELOW * crown["height"]))
     strip = img[sy1:sy2, sx1:sx2]
 
     blur = cv2.GaussianBlur(strip, (5, 5), 0)
@@ -277,10 +277,10 @@ def find_trunk(img, canopy, stages_prefix=None):
 
 # Drawing colours (OpenCV uses blue, green, red order) and their legend labels
 COLOURS = {
-    "canopy":     ((255, 0, 0),   "Canopy outline (YOLOE mask, convex hull)"),
+    "crown":     ((255, 0, 0),   "Crown outline (YOLOE mask, convex hull)"),
     "leaves":     ((255, 255, 0), "Low leaves added by texture tracing"),
-    "canopy_box": ((0, 165, 255), "Canopy box (tree top, canopy sides, canopy base)"),
-    "trunk_box":  ((0, 0, 255),   "Trunk box (canopy base to traced trunk base)"),
+    "crown_box": ((0, 165, 255), "Crown box (tree top, crown sides, crown base)"),
+    "trunk_box":  ((0, 0, 255),   "Trunk box (crown base to traced trunk base)"),
     "strip":      ((0, 255, 255), "Trunk search strip"),
     "trunk":      ((255, 0, 255), "Trunk found by Otsu on a*"),
     "width":      ((0, 255, 0),   "Trunk width (below tape band)"),
@@ -311,23 +311,23 @@ def draw_legend(img, keys):
         cv2.putText(img, COLOURS[k][1], (x0 + 2 * pad + line_len, y + 9), font, scale, (255, 255, 255), thick)
 
 
-def draw_result(img, canopy, trunk, strip_box, out_path):
+def draw_result(img, crown, trunk, strip_box, out_path):
     out = img.copy()
     cv2.rectangle(out, strip_box[:2], strip_box[2:], COLOURS["strip"][0], 2)
-    cv2.drawContours(out, [canopy["hull"]], -1, COLOURS["canopy"][0], 3)
-    # Canopy box: top = tree top, sides = widest canopy points, bottom = canopy base
-    keys = ["canopy"]
-    if canopy.get("low_leaves") is not None and canopy["low_leaves"].any():
-        out[canopy["low_leaves"]] = COLOURS["leaves"][0]
+    cv2.drawContours(out, [crown["hull"]], -1, COLOURS["crown"][0], 3)
+    # Crown box: top = tree top, sides = widest crown points, bottom = crown base
+    keys = ["crown"]
+    if crown.get("low_leaves") is not None and crown["low_leaves"].any():
+        out[crown["low_leaves"]] = COLOURS["leaves"][0]
         keys.append("leaves")
-    cv2.rectangle(out, (canopy["left"], canopy["top"]), (canopy["right"], canopy["base"]),
-                  COLOURS["canopy_box"][0], 3)
-    keys.append("canopy_box")
+    cv2.rectangle(out, (crown["left"], crown["top"]), (crown["right"], crown["base"]),
+                  COLOURS["crown_box"][0], 3)
+    keys.append("crown_box")
     if trunk:
         cv2.drawContours(out, [trunk["contour"]], -1, COLOURS["trunk"][0], 3)
-        # Trunk box: from the canopy base down to the traced trunk base, as wide as the measured trunk
+        # Trunk box: from the crown base down to the traced trunk base, as wide as the measured trunk
         half = trunk["width"] / 2
-        cv2.rectangle(out, (int(round(trunk["centre_x"] - half)), canopy["base"]),
+        cv2.rectangle(out, (int(round(trunk["centre_x"] - half)), crown["base"]),
                       (int(round(trunk["centre_x"] + half)), trunk["base"]), COLOURS["trunk_box"][0], 3)
         draw_width(out, trunk, thickness=4)
         keys += ["trunk_box", "trunk", "width"]
@@ -343,9 +343,9 @@ for image_path in sorted(TEST_DIR.glob("*/*.jpg")):
     img = cv2.imread(str(image_path))
     row = {"position": position, "image": image_path.name}
 
-    canopy = find_canopy(img)
-    if canopy is None:
-        print(f"{position} / {image_path.name}: no canopy found")
+    crown = find_crown(img)
+    if crown is None:
+        print(f"{position} / {image_path.name}: no crown found")
         rows.append(row)
         continue
 
@@ -354,40 +354,40 @@ for image_path in sorted(TEST_DIR.glob("*/*.jpg")):
     if position not in first_of_position:
         first_of_position.add(position)
         stages = str(OUTPUT_DIR / "stages" / position)
-    trunk, strip_box = find_trunk(img, canopy, stages)
-    canopy["base"], canopy["low_leaves"] = (trace_canopy_base(img, canopy, trunk) if trunk and TRACE_LOW_LEAVES
-                                            else (canopy["bottom"], None))
+    trunk, strip_box = find_trunk(img, crown, stages)
+    crown["base"], crown["low_leaves"] = (trace_crown_base(img, crown, trunk) if trunk and TRACE_LOW_LEAVES
+                                            else (crown["bottom"], None))
 
-    row.update(tree_top=canopy["top"], canopy_bottom=canopy["bottom"], canopy_base=canopy["base"],
-               canopy_left=canopy["left"], canopy_right=canopy["right"], canopy_width=canopy["width"],
-               crown_length=canopy["base"] - canopy["top"],                   # tree top to canopy base
-               canopy_hull_area=canopy["hull_area"], canopy_mask_area=canopy["mask_area"])
+    row.update(tree_top=crown["top"], crown_bottom=crown["bottom"], crown_base=crown["base"],
+               crown_left=crown["left"], crown_right=crown["right"], crown_width=crown["width"],
+               crown_length=crown["base"] - crown["top"],                   # tree top to crown base
+               crown_hull_area=crown["hull_area"], crown_mask_area=crown["mask_area"])
     if trunk:
         row.update(trunk_base=trunk["base"], otsu_bottom=trunk["otsu_bottom"], trunk_width=round(trunk["width"], 1),
                    trunk_width_canny=trunk["width_canny"] if trunk["width_canny"] is not None else "",
                    trunk_width_a_star=trunk["width_a_star"],
                    band_top=trunk["band"][0] if trunk["band"] else "", band_bottom=trunk["band"][1] if trunk["band"] else "",
-                   tree_height=trunk["base"] - canopy["top"],
-                   crown_base_height=trunk["base"] - canopy["base"])           # canopy base to the ground
+                   tree_height=trunk["base"] - crown["top"],
+                   crown_base_height=trunk["base"] - crown["base"])           # crown base to the ground
     rows.append(row)
-    draw_result(img, canopy, trunk, strip_box, OUTPUT_DIR / f"{position} - {image_path.name}")
-    print(f"{position:20s} {image_path.stem[-8:]}  top={canopy['top']:4d}  "
+    draw_result(img, crown, trunk, strip_box, OUTPUT_DIR / f"{position} - {image_path.name}")
+    print(f"{position:20s} {image_path.stem[-8:]}  top={crown['top']:4d}  "
           f"trunk_base={row.get('trunk_base', '-'):>5}  height={row.get('tree_height', '-'):>5}  "
-          f"canopy_w={canopy['width']:4d}  trunk_w={row.get('trunk_width', '-'):>5}  "
+          f"crown_w={crown['width']:4d}  trunk_w={row.get('trunk_width', '-'):>5}  "
           f"(canny {row.get('trunk_width_canny', '-')}, a* {row.get('trunk_width_a_star', '-')})  "
-          f"band={row.get('band_top', '-')}-{row.get('band_bottom', '-')}  hull_area={canopy['hull_area']}")
+          f"band={row.get('band_top', '-')}-{row.get('band_bottom', '-')}  hull_area={crown['hull_area']}")
 
-fields = ["position", "image", "tree_top", "canopy_bottom", "canopy_base", "trunk_base", "otsu_bottom",
+fields = ["position", "image", "tree_top", "crown_bottom", "crown_base", "trunk_base", "otsu_bottom",
           "tree_height", "crown_length", "crown_base_height",
-          "canopy_left", "canopy_right", "canopy_width", "trunk_width", "trunk_width_canny", "trunk_width_a_star",
-          "band_top", "band_bottom", "canopy_hull_area", "canopy_mask_area"]
-with open(OUTPUT_DIR / "canopy_trunk.csv", "w", newline="") as f:
+          "crown_left", "crown_right", "crown_width", "trunk_width", "trunk_width_canny", "trunk_width_a_star",
+          "band_top", "band_bottom", "crown_hull_area", "crown_mask_area"]
+with open(OUTPUT_DIR / "crown_trunk.csv", "w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=fields)
     writer.writeheader()
     writer.writerows(rows)
 
-KEYS = ("tree_top", "canopy_base", "trunk_base", "tree_height", "crown_length", "crown_base_height",
-        "canopy_width", "trunk_width", "trunk_width_canny")
+KEYS = ("tree_top", "crown_base", "trunk_base", "tree_height", "crown_length", "crown_base_height",
+        "crown_width", "trunk_width", "trunk_width_canny")
 print("\nMean (spread = max - min) across the 4 photos at each position, in px")
 print(f"{'position':20s}" + "".join(f"{k:>18s}" for k in KEYS))
 means = {}
@@ -404,5 +404,5 @@ for position in sorted({r["position"] for r in rows}):
 distances = [float(p.split(" - ")[1].rstrip("m")) for p in sorted({r["position"] for r in rows})]
 print("\nGrowth factor vs the first position (expected from distance: "
       + ", ".join(f"{distances[0] / d:.2f}" for d in distances) + ")")
-for key in ("tree_height", "crown_length", "crown_base_height", "canopy_width", "trunk_width", "trunk_width_canny"):
+for key in ("tree_height", "crown_length", "crown_base_height", "crown_width", "trunk_width", "trunk_width_canny"):
     print(f"  {key:18s} " + ", ".join(f"{m / means[key][0]:.2f}" for m in means[key]))

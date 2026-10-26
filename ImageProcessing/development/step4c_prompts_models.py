@@ -1,5 +1,5 @@
 # Step 4c: does a different text prompt or a bigger YOLOE model find the whole tree
-# (canopy AND trunk) consistently?
+# (crown AND trunk) consistently?
 # For every model + prompt pair, each photo is run and the bottom of the combined
 # tree mask is recorded. Success means: small spread between the 4 identical photos
 # at a position, AND the bottom sits at the trunk base at every position.
