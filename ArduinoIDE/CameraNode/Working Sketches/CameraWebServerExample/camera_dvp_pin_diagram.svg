@@ -1,0 +1,77 @@
+<svg viewBox="0 0 860 560" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>DVP camera interface pin groups between ESP32-S3 and OV3660</title>
+<desc>Block diagram showing the ESP32-S3 FireBeetle 2 connected to the OV3660 camera via three pin groups: an 8-bit parallel data bus (Y2-Y9), timing/sync signals (XCLK, PCLK, HREF, VSYNC), and an SCCB/I2C-style control interface (SIOD, SIOC). A frame-line-byte hierarchy legend is shown below.</desc>
+
+<rect x="0" y="0" width="860" height="560" fill="#ffffff"/>
+
+<!-- ESP32 box -->
+<rect x="40" y="60" width="230" height="300" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="2"/>
+<text x="155" y="90" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#111827">ESP32-S3</text>
+<text x="155" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">FireBeetle 2</text>
+
+<!-- LEDC sub-box inside ESP32 -->
+<rect x="65" y="140" width="180" height="70" rx="6" fill="#ffffff" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="155" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#2563eb">LEDC peripheral</text>
+<text x="155" y="183" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">PWM square wave</text>
+<text x="155" y="199" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">generates XCLK</text>
+
+<text x="155" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">Reads Y2-Y9 bus</text>
+<text x="155" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">on each PCLK tick</text>
+
+<text x="155" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">Configures camera</text>
+<text x="155" y="327" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">via SCCB (I2C-style)</text>
+
+<!-- Camera box -->
+<rect x="590" y="60" width="230" height="300" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="2"/>
+<text x="705" y="90" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#111827">OV3660</text>
+<text x="705" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">Camera module</text>
+
+<text x="705" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">Outputs 1 byte of</text>
+<text x="705" y="247" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">pixel data per tick</text>
+
+<text x="705" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">Internal PLL derives</text>
+<text x="705" y="317" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">PCLK/HREF/VSYNC from XCLK</text>
+
+<!-- Data bus group (top) -->
+<line x1="270" y1="130" x2="590" y2="130" stroke="#2563eb" stroke-width="3"/>
+<text x="430" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#2563eb">Y2-Y9</text>
+<text x="430" y="148" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">8-bit parallel data bus (1 byte/tick)</text>
+<polygon points="590,130 578,124 578,136" fill="#2563eb"/>
+
+<!-- Sync/clock group (middle) -->
+<line x1="270" y1="210" x2="590" y2="210" stroke="#1f2937" stroke-width="2"/>
+<polygon points="270,210 282,204 282,216" fill="#1f2937"/>
+<text x="430" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#111827">XCLK</text>
+
+<line x1="270" y1="235" x2="590" y2="235" stroke="#1f2937" stroke-width="2"/>
+<polygon points="590,235 578,229 578,241" fill="#1f2937"/>
+<text x="430" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#111827">PCLK</text>
+
+<line x1="270" y1="270" x2="590" y2="270" stroke="#1f2937" stroke-width="2"/>
+<polygon points="590,270 578,264 578,276" fill="#1f2937"/>
+<text x="430" y="287" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#111827">HREF</text>
+
+<line x1="270" y1="305" x2="590" y2="305" stroke="#1f2937" stroke-width="2"/>
+<polygon points="590,305 578,299 578,311" fill="#1f2937"/>
+<text x="430" y="322" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#111827">VSYNC</text>
+
+<!-- Control group (bottom) -->
+<line x1="270" y1="345" x2="590" y2="345" stroke="#4b5563" stroke-width="2"/>
+<polygon points="270,345 282,339 282,351" fill="#4b5563"/>
+<polygon points="590,345 578,339 578,351" fill="#4b5563"/>
+<text x="430" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#111827">SIOD / SIOC</text>
+<text x="430" y="363" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">SCCB control (I2C-style, sets resolution etc.)</text>
+
+<!-- Legend: frame > line > byte hierarchy -->
+<rect x="40" y="410" width="780" height="120" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1"/>
+<text x="60" y="435" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#111827">Framing hierarchy</text>
+
+<text x="60" y="465" font-family="Arial, sans-serif" font-size="12" fill="#111827">VSYNC</text>
+<text x="140" y="465" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">marks start/end of one full frame (photo)</text>
+
+<text x="60" y="488" font-family="Arial, sans-serif" font-size="12" fill="#111827">HREF</text>
+<text x="140" y="488" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">stays high for the duration of one row within the frame</text>
+
+<text x="60" y="511" font-family="Arial, sans-serif" font-size="12" fill="#111827">PCLK</text>
+<text x="140" y="511" font-family="Arial, sans-serif" font-size="11" fill="#4b5563">marks each byte of pixel data on the Y2-Y9 bus within a row</text>
+</svg>

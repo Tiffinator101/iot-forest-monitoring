@@ -1,0 +1,32 @@
+# Wi-Fi password and server address, one per Wi-Fi sketch
+secrets.h
+
+# Python virtual environments and caches
+.venv/
+__pycache__/
+
+# YOLO model weights (too big for GitHub; Ultralytics downloads them again)
+*.pt
+ImageProcessing/models/
+runs/
+
+# Image processing results
+ImageProcessing/output/
+
+# Base station data (readings database and received photos)
+BaseStation/database.db
+BaseStation/images/
+BaseStation/failed/
+
+# Factory flash and EEPROM dumps of the sensor nodes
+ArduinoIDE/SensorNode/FactoryFirmwareBackup/
+
+# Copied Arduino libraries (the sketches use the ones installed in the Arduino IDE)
+ArduinoIDE/**/libraries/
+
+# Personal working notes
+*_learning_checklist.md
+
+# Editor and tool settings
+.vscode/
+.claude/
