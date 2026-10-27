@@ -129,27 +129,29 @@ def half_max_width(a_star, line, y0, y1, width):
 
 # Drawing colours (OpenCV order: blue, green, red) and legend labels. Chosen to stand out against the
 # camera's pink and blue sky, the green leaves and grass, and the brown bark.
-COLOURS = [((0, 0, 255), "Crown box (tree top, crown sides, crown base)"),       # red
-           ((0, 255, 255), "Crown outline (YOLOE mask)"),                          # yellow
-           ((0, 0, 0), "Trunk box (crown base to trunk base)"),                    # black
-           ((255, 255, 0), "Trunk width")]                                          # cyan
+COLOURS = [((0, 0, 255), "Crown box"),         # red
+           ((0, 255, 255), "Crown outline"),   # yellow
+           ((0, 0, 0), "Trunk box"),           # black
+           ((255, 255, 0), "Trunk width")]     # cyan
 
 
 def draw_legend(img):
     """Light legend in the bottom-right corner, which is grass in the camera node's photos. Each colour
-    line has a black edge so the yellow and cyan lines show on the light background."""
-    font, scale, thick, pad, line_len, row_h = cv2.FONT_HERSHEY_SIMPLEX, 1.2, 3, 22, 75, 56
+    line has a black edge so the yellow and cyan lines show on the light background. Sized so the text
+    can be read when the photo is printed at half the report's page width, while the legend still stays
+    below the trunk base in the 10 m test photos."""
+    font, scale, thick, pad, line_len, row_h = cv2.FONT_HERSHEY_SIMPLEX, 1.8, 4, 33, 112, 84
     text_w = max(cv2.getTextSize(t, font, scale, thick)[0][0] for _, t in COLOURS)
-    box_w, box_h = pad * 3 + line_len + text_w, pad * 2 + row_h * len(COLOURS) - 14
+    box_w, box_h = pad * 3 + line_len + text_w, pad * 2 + row_h * len(COLOURS) - 21
     x0, y0 = img.shape[1] - box_w - 20, img.shape[0] - box_h - 20
     shade = img.copy()
     cv2.rectangle(shade, (x0, y0), (x0 + box_w, y0 + box_h), (235, 235, 235), cv2.FILLED)
     cv2.addWeighted(shade, 0.85, img, 0.15, 0, dst=img)
     for i, (colour, text) in enumerate(COLOURS):
-        y = y0 + pad + i * row_h + 20
-        cv2.line(img, (x0 + pad, y), (x0 + pad + line_len, y), (0, 0, 0), 11)
-        cv2.line(img, (x0 + pad, y), (x0 + pad + line_len, y), colour, 6)
-        cv2.putText(img, text, (x0 + 2 * pad + line_len, y + 13), font, scale, (0, 0, 0), thick)
+        y = y0 + pad + i * row_h + 30
+        cv2.line(img, (x0 + pad, y), (x0 + pad + line_len, y), (0, 0, 0), 16)
+        cv2.line(img, (x0 + pad, y), (x0 + pad + line_len, y), colour, 9)
+        cv2.putText(img, text, (x0 + 2 * pad + line_len, y + 20), font, scale, (0, 0, 0), thick)
 
 
 def measure(img, distance_m, width_height_m=WIDTH_HEIGHT_M, f_px=F_PX):
